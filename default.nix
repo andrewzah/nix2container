@@ -71,11 +71,26 @@
       skopeo --insecure-policy copy nix:${image} docker-daemon:${image.imageName}:${image.imageTag} "$@"
     '';
 
-  copyToRegistry = image:
-    writeSkopeoApplication "copy-to-registry" ''
-      echo "Copy to Docker registry image ${image.imageName}:${image.imageTag}"
-      skopeo --insecure-policy copy nix:${image} docker://${image.imageName}:${image.imageTag} "$@"
-    '';
+  copyToRegistry = let
+    authFile = "/etc/skopeo/auth.json";
+  in
+    image:
+      writeSkopeoApplication "copy-to-registry" ''
+        echo "Copy to Docker registry image ${image.imageName}:${image.imageTag}"
+
+        authfile=""
+        if [[ -f "${authFile}" ]]; then
+          authfile="--authfile=${authFile}"
+        fi
+
+        skopeo \
+          --insecure-policy \
+          copy \
+          nix:${image} \
+          docker://${image.imageName}:${image.imageTag} \
+          "$authfile" \
+          "$@" | cat
+      '';
 
   copyToPodman = image:
     writeSkopeoApplication "copy-to-podman" ''
